@@ -197,6 +197,7 @@
                 <div style="margin-bottom: 10px;">
                     <button id="scanPage" style="background: #e83e8c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Scan Page</button>
                     <button id="testFields" style="background: #6f42c1; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Test Fields</button>
+                    <button id="switchTabs" style="background: #20c997; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Switch Tabs</button>
                 </div>
                 <textarea id="csvData" placeholder="Paste your CSV data here..."
                           style="width: 100%; height: 100px; margin-bottom: 10px; font-size: 11px;"></textarea>
@@ -262,6 +263,9 @@
     document
       .getElementById("testFields")
       .addEventListener("click", testFieldDetection);
+    document
+      .getElementById("switchTabs")
+      .addEventListener("click", switchToTabsAndFillFields);
     document
       .getElementById("saveEntry")
       .addEventListener("click", clickSaveEntry);
@@ -547,10 +551,57 @@
           }
         }
 
+        if (
+          !option &&
+          element.name &&
+          (element.name.includes("regularstart") ||
+            element.name.includes("regularstop"))
+        ) {
+          console.log(
+            `[v0] Handling time field: ${element.name} with value: ${value}`
+          );
+
+          // Convert decimal hours to "X hr Y min" format if needed
+          if (!isNaN(value)) {
+            const hours = Math.floor(Number.parseFloat(value));
+            const minutes = Math.round((Number.parseFloat(value) - hours) * 60);
+            const formattedTime = `${hours} hr ${minutes
+              .toString()
+              .padStart(2, "0")} min`;
+            console.log(`[v0] Converted ${value} to ${formattedTime}`);
+            option = options.find((opt) => opt.text.trim() === formattedTime);
+          }
+
+          // Try partial matching for time values
+          if (!option) {
+            const numericValue = Number.parseFloat(value);
+            if (!isNaN(numericValue)) {
+              option = options.find((opt) => {
+                const optText = opt.text.toLowerCase();
+                const hourMatch = optText.match(/(\d+)\s*hr/);
+                if (hourMatch) {
+                  const optHours = Number.parseInt(hourMatch[1]);
+                  return Math.abs(optHours - numericValue) < 0.5;
+                }
+                return false;
+              });
+            }
+          }
+        }
+
         if (option) {
+          console.log(
+            `[v0] Setting select field to: ${option.text} (value: ${option.value})`
+          );
           element.value = option.value;
           element.dispatchEvent(new Event("change", { bubbles: true }));
           return true;
+        } else {
+          console.log(`[v0] No matching option found for value: ${value}`);
+          console.log(
+            `[v0] Available options:`,
+            options.map((opt) => `"${opt.text}" (${opt.value})`)
+          );
         }
       } else {
         // Handle input/textarea and autocomplete fields
@@ -601,8 +652,8 @@
     const entry = timeEntries[index];
     updateStatus("Processing entry...", "info");
 
-    let fieldsProcessed = 0;
-    let fieldsSuccessful = 0;
+    const fieldsProcessed = 0;
+    const fieldsSuccessful = 0;
 
     const processingOrder = [
       {
@@ -635,54 +686,184 @@
         field: "Detailed Description",
         fieldType: "detailedDescription",
       },
-      { key: "startTime", field: "Start Time", fieldType: "startTime" },
+      {
+        key: "startTime",
+        field: "Start Time",
+        fieldType: "startTime",
+        switchToEmployeeHours: true,
+      },
       { key: "endTime", field: "End Time", fieldType: "endTime" },
     ];
 
     processingOrder.forEach((item, i) => {
       setTimeout(
         () => {
-          const value = entry[item.field];
-          if (value) {
-            const element = findField(item.fieldType);
-            if (element) {
-              const success = fillField(element, value);
-              if (success) {
-                fieldsSuccessful++;
-                console.log(`✓ Filled ${item.field}: ${value}`);
+          if (item.switchToEmployeeHours) {
+            console.log(
+              `[v0] Switching to Employee Hours tab before processing ${item.field}`
+            );
+            switchToEmployeeHoursTab();
 
-                if (item.pauseAfter) {
-                  console.log(
-                    `[v0] Pausing after ${item.field} for dependent fields to load...`
-                  );
-                  setTimeout(() => {
-                    console.log(`[v0] Resuming after ${item.field} pause`);
-                    // Re-scan for fields after dependent field loading
-                    scanPageForFields();
-                  }, 2000);
-                }
-              } else {
-                console.log(`✗ Failed to fill ${item.field}: ${value}`);
-              }
-            } else {
-              console.log(`✗ Field not found: ${item.field}`);
-            }
-          }
-          fieldsProcessed++;
-
-          // Update status when all fields are processed
-          if (fieldsProcessed === processingOrder.length) {
-            updateStatus(
-              `Processed entry ${index + 1}: ${fieldsSuccessful}/${
-                processingOrder.length
-              } fields filled successfully.`,
-              fieldsSuccessful > 0 ? "success" : "warning"
+            // Wait for tab switching to complete, then continue with field processing
+            setTimeout(() => {
+              processFieldItem(
+                item,
+                entry,
+                fieldsProcessed,
+                fieldsSuccessful,
+                processingOrder
+              );
+            }, 3000);
+          } else {
+            processFieldItem(
+              item,
+              entry,
+              fieldsProcessed,
+              fieldsSuccessful,
+              processingOrder
             );
           }
         },
         i === 0 ? 0 : i === 1 ? 4000 : i === 4 ? 3000 : i * 500
       );
     });
+  }
+
+  function processFieldItem(
+    item,
+    entry,
+    fieldsProcessed,
+    fieldsSuccessful,
+    processingOrder
+  ) {
+    const value = entry[item.field];
+    if (value) {
+      const element = findField(item.fieldType);
+      if (element) {
+        const success = fillField(element, value);
+        if (success) {
+          fieldsSuccessful++;
+          console.log(`✓ Filled ${item.field}: ${value}`);
+
+          if (item.pauseAfter) {
+            console.log(
+              `[v0] Pausing after ${item.field} for dependent fields to load...`
+            );
+            setTimeout(() => {
+              console.log(`[v0] Resuming after ${item.field} pause`);
+              // Re-scan for fields after dependent field loading
+              scanPageForFields();
+            }, 2000);
+          }
+        } else {
+          console.log(`✗ Failed to fill ${item.field}: ${value}`);
+        }
+      } else {
+        console.log(`✗ Field not found: ${item.field}`);
+      }
+    }
+    fieldsProcessed++;
+
+    // Update status when all fields are processed
+    if (fieldsProcessed === processingOrder.length) {
+      updateStatus(
+        `Processed entry ${currentIndex + 1}: ${fieldsSuccessful}/${
+          processingOrder.length
+        } fields filled successfully.`,
+        fieldsSuccessful > 0 ? "success" : "warning"
+      );
+    }
+  }
+
+  function switchToTabsAndFillFields() {
+    console.log("[v0] Looking for tabs to switch to...");
+
+    // Find all tab elements
+    const tabSelectors = [
+      ".tab_caption_text",
+      ".tab-caption",
+      ".nav-tab",
+      '[role="tab"]',
+      ".ui-tabs-tab",
+      ".tab_header",
+    ];
+
+    const tabs = [];
+    tabSelectors.forEach((selector) => {
+      const elements = document.querySelectorAll(selector);
+      elements.forEach((el) => {
+        if (
+          el.textContent.trim().toLowerCase().includes("employee hours") ||
+          el.textContent.trim().toLowerCase().includes("employee") ||
+          el.textContent.trim().toLowerCase().includes("hours")
+        ) {
+          tabs.push(el);
+        }
+      });
+    });
+
+    console.log(`[v0] Found ${tabs.length} potential tabs`);
+
+    // Click each tab and check for fields
+    tabs.forEach((tab, index) => {
+      setTimeout(() => {
+        console.log(
+          `[v0] Clicking tab ${index + 1}: "${tab.textContent.trim()}"`
+        );
+        tab.click();
+
+        // Wait for tab content to load, then scan for fields
+        setTimeout(() => {
+          console.log(`[v0] Scanning for fields after tab switch...`);
+          testFieldDetection();
+        }, 1000);
+      }, index * 2000); // Stagger tab clicks
+    });
+  }
+
+  function switchToEmployeeHoursTab() {
+    console.log("[v0] Looking for Employee Hours tab...");
+
+    const tabSelectors = [
+      ".tab_caption_text",
+      ".tab-caption",
+      ".nav-tab",
+      '[role="tab"]',
+      ".ui-tabs-tab",
+      ".tab_header",
+    ];
+
+    let employeeHoursTab = null;
+
+    tabSelectors.forEach((selector) => {
+      if (!employeeHoursTab) {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach((el) => {
+          if (el.textContent.trim().toLowerCase().includes("employee hours")) {
+            employeeHoursTab = el;
+            console.log(
+              `[v0] Found Employee Hours tab: "${el.textContent.trim()}"`
+            );
+          }
+        });
+      }
+    });
+
+    if (employeeHoursTab) {
+      console.log("[v0] Clicking Employee Hours tab...");
+      employeeHoursTab.click();
+
+      // Wait for tab content to load
+      setTimeout(() => {
+        console.log(
+          "[v0] Employee Hours tab loaded, scanning for time fields..."
+        );
+        // Re-scan for fields after tab switch
+        testFieldDetection();
+      }, 2000);
+    } else {
+      console.log("[v0] Employee Hours tab not found");
+    }
   }
 
   // Click "New Entry" button
