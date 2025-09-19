@@ -907,6 +907,21 @@
 
   // Click "New Entry" button
   function clickNewEntry() {
+    if (window.location.href.includes("x_st_sti_tab_daily_time_list.do")) {
+      const newButton =
+        document.querySelector('button#sysverb_new[value="sysverb_new"]') ||
+        document.querySelector(
+          'button[table="x_st_sti_tab_daily_time"][data-action-label="New"]'
+        ) ||
+        document.querySelector('button.btn-primary:contains("New")');
+
+      if (newButton && newButton.offsetParent !== null) {
+        newButton.click();
+        updateStatus("Clicked ServiceNow New button", "info");
+        return;
+      }
+    }
+
     // Look for various "New" or "Add" buttons
     const newButtons = [
       'button[aria-label*="New"]',
@@ -948,6 +963,18 @@
 
   // Click "Save" button
   function clickSaveEntry() {
+    const submitButton = document.querySelector(
+      '#sysverb_insert_bottom, button[value="sysverb_insert"]'
+    );
+
+    if (submitButton && submitButton.offsetParent !== null) {
+      console.log("[v0] Clicking ServiceNow submit button");
+      submitButton.click();
+      updateStatus("Clicked Submit button", "success");
+      return;
+    }
+
+    // Fallback to original save button logic
     const saveButtons = [
       'button[aria-label*="Save"]',
       'button[title*="Save"]',
