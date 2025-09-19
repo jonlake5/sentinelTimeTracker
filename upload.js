@@ -652,127 +652,166 @@
     const entry = timeEntries[index];
     updateStatus("Processing entry...", "info");
 
-    const fieldsProcessed = 0;
-    const fieldsSuccessful = 0;
-
     const processingOrder = [
+      { key: "date", field: "Date", fieldType: "date", step: 1 },
       {
         key: "showTimeAs",
         field: "Show Time As",
         fieldType: "showTimeAs",
+        step: 2,
         pauseAfter: true,
       },
-      { key: "date", field: "Date", fieldType: "date" },
-      { key: "location", field: "Location", fieldType: "location" },
+      { key: "location", field: "Location", fieldType: "location", step: 3 },
       {
         key: "company",
         field: "Company",
         fieldType: "company",
+        step: 4,
         pauseAfter: true,
       },
-      { key: "projectName", field: "Project Name", fieldType: "projectName" },
+      {
+        key: "projectName",
+        field: "Project Name",
+        fieldType: "projectName",
+        step: 5,
+        pauseAfter: true,
+      },
       {
         key: "projectActivity",
         field: "Project Activity",
         fieldType: "projectActivity",
+        step: 6,
+        retryDependent: true,
       },
       {
         key: "shortDescription",
         field: "Short Description",
         fieldType: "shortDescription",
+        step: 7,
       },
       {
         key: "detailedDescription",
         field: "Detailed Description",
         fieldType: "detailedDescription",
+        step: 8,
       },
       {
         key: "startTime",
         field: "Start Time",
         fieldType: "startTime",
+        step: 9,
         switchToEmployeeHours: true,
       },
-      { key: "endTime", field: "End Time", fieldType: "endTime" },
+      { key: "endTime", field: "End Time", fieldType: "endTime", step: 10 },
     ];
 
-    processingOrder.forEach((item, i) => {
-      setTimeout(
-        () => {
-          if (item.switchToEmployeeHours) {
-            console.log(
-              `[v0] Switching to Employee Hours tab before processing ${item.field}`
-            );
-            switchToEmployeeHoursTab();
-
-            // Wait for tab switching to complete, then continue with field processing
-            setTimeout(() => {
-              processFieldItem(
-                item,
-                entry,
-                fieldsProcessed,
-                fieldsSuccessful,
-                processingOrder
-              );
-            }, 3000);
-          } else {
-            processFieldItem(
-              item,
-              entry,
-              fieldsProcessed,
-              fieldsSuccessful,
-              processingOrder
-            );
-          }
-        },
-        i === 0 ? 0 : i === 1 ? 4000 : i === 4 ? 3000 : i * 500
-      );
+    console.log("[v0] Verifying we are on the Details tab...");
+    ensureOnDetailsTab(() => {
+      console.log("[v0] Starting field processing in specified order...");
+      processFieldsInOrder(entry, processingOrder, 0);
     });
   }
 
-  function processFieldItem(
-    item,
-    entry,
-    fieldsProcessed,
-    fieldsSuccessful,
-    processingOrder
-  ) {
+  function ensureOnDetailsTab(callback) {
+    const detailsTabs = Array.from(
+      document.querySelectorAll("span.tab_caption_text")
+    ).filter((tab) => tab.textContent.trim() === "Details");
+
+    if (detailsTabs.length > 0) {
+      // Click the first Details tab to ensure we're on it
+      const firstDetailsTab = detailsTabs[0];
+      const tabElement = firstDetailsTab.closest(
+        '[role="tab"], .tab_header, .tab'
+      );
+      if (tabElement) {
+        console.log("[v0] Clicking Details tab to ensure we're on it");
+        tabElement.click();
+        setTimeout(callback, 1000); // Wait for tab to load
+        return;
+      }
+    }
+
+    console.log("[v0] Details tab not found or already active, proceeding...");
+    callback();
+  }
+
+  function processFieldsInOrder(entry, processingOrder, currentStep) {
+    if (currentStep >= processingOrder.length) {
+      console.log("[v0] All fields processed in order");
+      return;
+    }
+
+    const item = processingOrder[currentStep];
     const value = entry[item.field];
+
+    console.log(`[v0] Step ${item.step}: Processing ${item.field}`);
+
+    if (item.switchToEmployeeHours) {
+      console.log(
+        `[v0] Switching to Employee Hours tab before processing ${item.field}`
+      );
+      switchToEmployeeHoursTab();
+
+      setTimeout(() => {
+        processCurrentField(item, value, () => {
+          processFieldsInOrder(entry, processingOrder, currentStep + 1);
+        });
+      }, 3000); // Wait for tab switch
+      return;
+    }
+
+    processCurrentField(item, value, () => {
+      if (item.pauseAfter) {
+        const pauseTime =
+          item.field === "Show Time As"
+            ? 3000
+            : item.field === "Company"
+            ? 2000
+            : item.field === "Project Name"
+            ? 2000
+            : 1000;
+
+        console.log(
+          `[v0] Pausing ${pauseTime}ms after ${item.field} for dependent fields to load...`
+        );
+        setTimeout(() => {
+          console.log(`[v0] Resuming after ${item.field} pause`);
+          scanPageForFields(); // Re-scan for new fields
+          processFieldsInOrder(entry, processingOrder, currentStep + 1);
+        }, pauseTime);
+      } else {
+        // Continue immediately to next field
+        setTimeout(() => {
+          processFieldsInOrder(entry, processingOrder, currentStep + 1);
+        }, 500);
+      }
+    });
+  }
+
+  function processCurrentField(item, value, callback) {
     if (value) {
       const element = findField(item.fieldType);
       if (element) {
         const success = fillField(element, value);
         if (success) {
-          fieldsSuccessful++;
-          console.log(`✓ Filled ${item.field}: ${value}`);
-
-          if (item.pauseAfter) {
-            console.log(
-              `[v0] Pausing after ${item.field} for dependent fields to load...`
-            );
-            setTimeout(() => {
-              console.log(`[v0] Resuming after ${item.field} pause`);
-              // Re-scan for fields after dependent field loading
-              scanPageForFields();
-            }, 2000);
-          }
+          console.log(
+            `[v0] ✓ Step ${item.step} - Filled ${item.field}: ${value}`
+          );
+          updateStatus(`Filled ${item.field}`, "success");
         } else {
-          console.log(`✗ Failed to fill ${item.field}: ${value}`);
+          console.log(
+            `[v0] ✗ Step ${item.step} - Failed to fill ${item.field}: ${value}`
+          );
         }
       } else {
-        console.log(`✗ Field not found: ${item.field}`);
+        console.log(
+          `[v0] ✗ Step ${item.step} - Field not found: ${item.field}`
+        );
       }
+    } else {
+      console.log(`[v0] - Step ${item.step} - No value for ${item.field}`);
     }
-    fieldsProcessed++;
-
-    // Update status when all fields are processed
-    if (fieldsProcessed === processingOrder.length) {
-      updateStatus(
-        `Processed entry ${currentIndex + 1}: ${fieldsSuccessful}/${
-          processingOrder.length
-        } fields filled successfully.`,
-        fieldsSuccessful > 0 ? "success" : "warning"
-      );
-    }
+    callback();
   }
 
   function switchToTabsAndFillFields() {
