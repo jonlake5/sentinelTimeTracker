@@ -97,6 +97,8 @@
       'input[aria-label*="Company"]',
     ],
     projectName: [
+      'input[name="sys_display.x_st_sti_tab_daily_time.projectnumber"]',
+      'input[id="sys_display.x_st_sti_tab_daily_time.projectnumber"]',
       'select[name="x_st_sti_tab_daily_time.projectname"]',
       'input[name="x_st_sti_tab_daily_time.projectname"]',
       'select[id="x_st_sti_tab_daily_time.projectname"]',
@@ -105,6 +107,8 @@
       'input[name*="project"]',
       'select[aria-label*="Project"]',
       'input[aria-label*="Project"]',
+      'input[data-dependent="company"]',
+      'input[data-type="ac_reference_input"]',
     ],
     projectActivity: [
       'select[name="x_st_sti_tab_daily_time.projectactivity"]',
@@ -549,10 +553,39 @@
           return true;
         }
       } else {
-        // Handle input/textarea
+        // Handle input/textarea and autocomplete fields
         element.value = value;
         element.dispatchEvent(new Event("input", { bubbles: true }));
         element.dispatchEvent(new Event("change", { bubbles: true }));
+
+        if (element.getAttribute("data-type") === "ac_reference_input") {
+          console.log(`[v0] Handling autocomplete field: ${element.name}`);
+
+          // Trigger focus to initialize autocomplete
+          element.focus();
+
+          // Dispatch additional events for ServiceNow autocomplete
+          element.dispatchEvent(new Event("keyup", { bubbles: true }));
+          element.dispatchEvent(new Event("blur", { bubbles: true }));
+
+          // Wait a moment then try to select from dropdown if it appears
+          setTimeout(() => {
+            const dropdown = document.querySelector(".ac_dropdown");
+            if (dropdown) {
+              const options = dropdown.querySelectorAll(".ac_option");
+              const matchingOption = Array.from(options).find((opt) =>
+                opt.textContent.toLowerCase().includes(value.toLowerCase())
+              );
+              if (matchingOption) {
+                matchingOption.click();
+                console.log(
+                  `[v0] Selected autocomplete option: ${matchingOption.textContent}`
+                );
+              }
+            }
+          }, 1000);
+        }
+
         return true;
       }
     } catch (error) {
@@ -580,7 +613,12 @@
       },
       { key: "date", field: "Date", fieldType: "date" },
       { key: "location", field: "Location", fieldType: "location" },
-      { key: "company", field: "Company", fieldType: "company" },
+      {
+        key: "company",
+        field: "Company",
+        fieldType: "company",
+        pauseAfter: true,
+      },
       { key: "projectName", field: "Project Name", fieldType: "projectName" },
       {
         key: "projectActivity",
@@ -615,13 +653,13 @@
 
                 if (item.pauseAfter) {
                   console.log(
-                    "[v0] Pausing after Show Time As for page refresh..."
+                    `[v0] Pausing after ${item.field} for dependent fields to load...`
                   );
                   setTimeout(() => {
-                    console.log("[v0] Resuming after Show Time As pause");
-                    // Re-scan for fields after page refresh
+                    console.log(`[v0] Resuming after ${item.field} pause`);
+                    // Re-scan for fields after dependent field loading
                     scanPageForFields();
-                  }, 3000);
+                  }, 2000);
                 }
               } else {
                 console.log(`✗ Failed to fill ${item.field}: ${value}`);
@@ -642,8 +680,8 @@
             );
           }
         },
-        i === 0 ? 0 : i === 1 ? 4000 : i * 500
-      ); // Longer delay after Show Time As
+        i === 0 ? 0 : i === 1 ? 4000 : i === 4 ? 3000 : i * 500
+      );
     });
   }
 
