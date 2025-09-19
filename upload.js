@@ -97,11 +97,11 @@
       'input[aria-label*="Company"]',
     ],
     projectName: [
-      'select[name="sys_display.x_st_sti_tab_daily_time.projectnumber"]',
-      'input[name="sys_display.x_st_sti_tab_daily_time.projectnumber"]',
-      'select[id="sys_display.x_st_sti_tab_daily_time.projectnumber"]',
-      'input[id="sys_display.x_st_sti_tab_daily_time.projectnumber"]',
-      'select[name*="projectnumber"]',
+      'select[name="x_st_sti_tab_daily_time.projectname"]',
+      'input[name="x_st_sti_tab_daily_time.projectname"]',
+      'select[id="x_st_sti_tab_daily_time.projectname"]',
+      'input[id="x_st_sti_tab_daily_time.projectname"]',
+      'select[name*="project"]',
       'input[name*="project"]',
       'select[aria-label*="Project"]',
       'input[aria-label*="Project"]',
@@ -137,20 +137,26 @@
       'input[aria-label*="Detail"]',
     ],
     startTime: [
-      'input[name="x_st_sti_tab_daily_time.regularstart"]',
-      'input[id="x_st_sti_tab_daily_time.regularstart"]',
-      'input[name*="regularstart"]',
-      'input[name*="regularstart"]',
+      'select[name="x_st_sti_tab_daily_time.regularstart"]',
+      'select[id="x_st_sti_tab_daily_time.regularstart"]',
+      'input[name="x_st_sti_tab_daily_time.starttime"]',
+      'input[id="x_st_sti_tab_daily_time.starttime"]',
+      'input[name*="starttime"]',
+      'input[name*="start_time"]',
+      'select[name*="regularstart"]',
       'input[aria-label*="Start"]',
       'input[placeholder*="Start"]',
     ],
     endTime: [
-      'input[name="x_st_sti_tab_daily_time.regularstop"]',
-      'input[id="x_st_sti_tab_daily_time.regularstop"]',
-      'input[name*="regularstop"]',
-      'input[name*="regularstop"]',
-      'input[aria-label*="Stop"]',
-      'input[placeholder*="Stop"]',
+      'select[name="x_st_sti_tab_daily_time.regularstop"]',
+      'select[id="x_st_sti_tab_daily_time.regularstop"]',
+      'input[name="x_st_sti_tab_daily_time.endtime"]',
+      'input[id="x_st_sti_tab_daily_time.endtime"]',
+      'input[name*="endtime"]',
+      'input[name*="end_time"]',
+      'select[name*="regularstop"]',
+      'input[aria-label*="End"]',
+      'input[placeholder*="End"]',
     ],
   };
 
@@ -521,6 +527,20 @@
           option = options.find((opt) =>
             opt.value.toLowerCase().includes(value.toLowerCase())
           );
+        }
+
+        if (!option && (value.includes("hr") || value.includes("min"))) {
+          // For time fields like "9 hr 00 min", try to match exactly
+          option = options.find((opt) => opt.text.trim() === value.trim());
+
+          if (!option) {
+            // Try to extract numeric value for time dropdowns
+            const timeMatch = value.match(/(\d+(?:\.\d+)?)\s*hr/);
+            if (timeMatch) {
+              const numericValue = timeMatch[1];
+              option = options.find((opt) => opt.value === numericValue);
+            }
+          }
         }
 
         if (option) {
