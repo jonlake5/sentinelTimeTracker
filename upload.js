@@ -1261,7 +1261,12 @@
       headers.forEach((header, index) => {
         // Clean header names and map to our expected format
         const cleanHeader = header.replace(/^\*+/, "").trim();
-        entry[cleanHeader] = values[index] ? values[index].trim() : "";
+        if (cleanHeader.toLowerCase() === "date") {
+          console.log("[v0] Converting Date to MM/DD/YYYY format");
+          entry[cleanHeader] = values[index].replaceAll("/", "-");
+        } else {
+          entry[cleanHeader] = values[index] ? values[index].trim() : "";
+        }
       });
 
       entries.push(entry);
