@@ -1276,9 +1276,28 @@
   }
 
   function parseCSVLine(line) {
-    return line.split(",").map((cell) => cell.trim());
-  }
+    const result = [];
+    let current = "";
+    let inQuotes = false;
 
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === "," && !inQuotes) {
+        result.push(current.trim());
+        current = "";
+      } else {
+        current += char;
+      }
+    }
+
+    // Don't forget to push the last cell
+    result.push(current.trim());
+
+    return result;
+  }
   try {
     initializeScript();
   } catch (error) {
