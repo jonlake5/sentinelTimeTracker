@@ -791,7 +791,7 @@
           "[v0] Employee Hours tab loaded, scanning for time fields..."
         );
         // Re-scan for fields after tab switch
-        testFieldDetection();
+        // testFieldDetection();
       }, 2000);
     } else {
       console.log("[v0] Employee Hours tab not found");
