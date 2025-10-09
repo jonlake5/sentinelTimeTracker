@@ -4,8 +4,8 @@
 // @version      2.1
 // @description  Enhanced ServiceNow time entry automation with better field detection and auto-fill
 // @author       You
-// @match        https://sentineld.service-now.com/x_st_sti_tab_daily_time.do*
-// @match        https://sentinel.service-now.com/x_st_sti_tab_daily_time.do*
+// @match        https://sentineld.service-now.com/x_st_sti_tab_daily_time*
+// @match        https://sentinel.service-now.com/x_st_sti_tab_daily_time*
 // @grant        none
 // ==/UserScript==
 
@@ -461,13 +461,13 @@
         // Try to find option by text content first
         const options = Array.from(element.options);
         let option = options.find((opt) =>
-          opt.text.toLowerCase().includes(value.toLowerCase())
+          opt.value.toLowerCase().includes(value.toLowerCase())
         );
 
         if (!option) {
           // Try by value
           option = options.find((opt) =>
-            opt.value.toLowerCase().includes(value.toLowerCase())
+            opt.text.toLowerCase().includes(value.toLowerCase())
           );
         }
 
