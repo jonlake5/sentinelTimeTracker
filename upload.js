@@ -460,14 +460,14 @@
       if (element.tagName === "SELECT") {
         // Try to find option by text content first
         const options = Array.from(element.options);
-        let option = options.find((opt) =>
-          opt.value.toLowerCase().includes(value.toLowerCase())
+        let option = options.find(
+          (opt) => opt.value.toLowerCase() === value.toLowerCase()
         );
 
         if (!option) {
           // Try by value
           option = options.find((opt) =>
-            opt.text.toLowerCase().includes(value.toLowerCase())
+            opt.text.toLowerCase().match(value.toLowerCase())
           );
         }
 
