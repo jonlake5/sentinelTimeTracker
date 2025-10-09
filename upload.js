@@ -4,8 +4,8 @@
 // @version      2.1
 // @description  Enhanced ServiceNow time entry automation with better field detection and auto-fill
 // @author       You
-// @match        https://sentineld.service-now.com/*
-// @match        https://sentinel.service-now.com/*
+// @match        https://sentineld.service-now.com/x_st_sti_tab_daily_time.do*
+// @match        https://sentinel.service-now.com/x_st_sti_tab_daily_time.do*
 // @grant        none
 // ==/UserScript==
 
@@ -341,7 +341,7 @@
           <h3 style="margin: 0; font-size: 16px;">ServiceNow Time Entry Automation v2.0</h3>
           <div style="font-size: 11px; opacity: 0.8;">Click and drag to move</div>
         </div>
-        
+
         <!-- Auto-fill Toggle -->
         <div style="margin-bottom: 10px;">
           <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
@@ -355,7 +355,7 @@
         <!-- CSV Input -->
         <div style="margin-bottom: 10px;">
           <label style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px;">CSV Data:</label>
-          <textarea id="csvData" placeholder="Paste your CSV data here..." 
+          <textarea id="csvData" placeholder="Paste your CSV data here..."
             style="width: 100%; height: 80px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 12px; resize: vertical;"></textarea>
         </div>
 
@@ -593,7 +593,7 @@
         field: "Show Time As",
         fieldType: "showTimeAs",
         step: 2,
-        pauseAfter: true,
+        pauseAfter: false,
       },
       { key: "location", field: "Location", fieldType: "location", step: 3 },
       {
@@ -601,21 +601,21 @@
         field: "Company",
         fieldType: "company",
         step: 4,
-        pauseAfter: true,
+        pauseAfter: false,
       },
       {
         key: "projectName",
         field: "Project Name",
         fieldType: "projectName",
         step: 5,
-        pauseAfter: true,
+        pauseAfter: false,
       },
       {
         key: "projectActivity",
         field: "Project Activity",
         fieldType: "projectActivity",
         step: 6,
-        retryDependent: true,
+        retryDependent: false,
       },
       {
         key: "shortDescription",
@@ -636,7 +636,12 @@
         step: 9,
         switchToEmployeeHours: true,
       },
-      { key: "endTime", field: "End Time", fieldType: "endTime", step: 10 },
+      {
+        key: "endTime",
+        field: "End Time",
+        fieldType: "endTime",
+        step: 10,
+      },
     ];
 
     console.log("[v0] Verifying we are on the Details tab...");
