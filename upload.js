@@ -695,7 +695,7 @@
         processCurrentField(item, value, () => {
           processFieldsInOrder(entry, processingOrder, currentStep + 1);
         });
-      }, 3000); // Wait for tab switch
+      }, 1); // Wait for tab switch
       return;
     }
 
@@ -792,7 +792,7 @@
         );
         // Re-scan for fields after tab switch
         // testFieldDetection();
-      }, 2000);
+      }, 1);
     } else {
       console.log("[v0] Employee Hours tab not found");
     }
