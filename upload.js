@@ -343,14 +343,7 @@
         </div>
 
         <!-- Auto-fill Toggle -->
-        <div style="margin-bottom: 10px;">
-          <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
-            <input type="checkbox" id="autoFillToggle" ${
-              autoFillEnabled ? "checked" : ""
-            }>
-            Auto-fill forms when page loads
-          </label>
-        </div>
+
 
         <!-- CSV Input -->
         <div style="margin-bottom: 10px;">
