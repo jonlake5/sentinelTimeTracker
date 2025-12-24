@@ -14,4 +14,6 @@ if ($null -eq $module) {
 if ((test-path $CONTENT_FILE) -eq $false) {
     Write-Error "The content file $CONTENT_FILE does not exist"
 }
-Import-Excel -Path $CONTENT_FILE  -AsText "Date" | Where-Object { $_.Date } | export-csv -notypeinformation -Path $TEMP_FILE
+# $data = Import-Excel -Path $CONTENT_FILE  -AsText "Date" | Where-Object { $_.Date } 
+$data = Import-Excel -Path $CONTENT_FILE  -AsText "Date"  -WorksheetName 'Time Tracking' -Verbose -StartColumn 1 -EndColumn 10 -StartRow 1 -StopRow 1000  | Where-Object { $_.Date } 
+$data | export-csv -notypeinformation -Path $TEMP_FILE
