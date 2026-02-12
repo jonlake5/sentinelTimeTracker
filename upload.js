@@ -377,7 +377,7 @@
             <button id="newEntryBtn" style="padding: 6px 10px; background: #6f42c1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">New Entry</button>
             <button id="fillBtn" style="padding: 6px 10px; background: #fd7e14; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Fill Form</button>
             <button id="saveBtn" style="padding: 6px 10px; background: #20c997; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Save Entry</button>
-            <button id="markCompleteBtn" style="padding: 6px 10px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Mark Complete</button>
+            <button id="markCompleteBtn" style="padding: 6px 10px; background: #ff0202; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Remove Entry</button>
           </div>
           <div id="entryPreview" style="font-size: 12px; color: #333; background: white; padding: 8px; border-radius: 4px; border: 1px solid #ddd; max-height: 120px; overflow-y: auto; line-height: 1.4;"></div>
         </div>
@@ -732,6 +732,8 @@
     if (saveButton) {
       console.log("[v0] Enabling Save button after field fill");
       saveButton.disabled = false;
+      saveButton.style.opacity = "1.0";
+      saveButton.style.cursor = "pointer";
     } else {
       console.log("[v0] Save button not found to enable");
     }
@@ -742,6 +744,8 @@
     if (saveButton) {
       console.log("[v0] Disabling Save button to prevent premature submission");
       saveButton.disabled = true;
+      saveButton.style.opacity = "0.5";
+      saveButton.style.cursor = "not-allowed";
     } else {
       console.log("[v0] Save button not found to disable");
     }
