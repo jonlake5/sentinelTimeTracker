@@ -13,15 +13,6 @@
   let timeEntries = [];
   let currentIndex = 0;
   let isProcessing = false;
-  let autoFillEnabled = false;
-  let panelCreated = false;
-
-  if (window.timeEntryScriptLoaded && window.timeEntryScriptInitialized) {
-    console.log(
-      "[v0] Script already loaded and initialized, preventing duplicate execution",
-    );
-    return;
-  }
 
   console.log("[v0] Starting ServiceNow Time Entry Automation script");
   window.timeEntryScriptLoaded = true;
@@ -33,10 +24,6 @@
         JSON.stringify(timeEntries),
       );
       localStorage.setItem("serviceNowCurrentIndex", currentIndex.toString());
-      localStorage.setItem(
-        "serviceNowAutoFillEnabled",
-        autoFillEnabled.toString(),
-      );
       console.log("[v0] Data saved to localStorage");
     } catch (error) {
       console.error("[v0] Error saving to localStorage:", error);
@@ -74,43 +61,6 @@
       }
     } catch (error) {
       console.error("[v0] Error loading data from storage:", error);
-    }
-  }
-
-  function detectPageType() {
-    const url = window.location.href;
-    const isListPage = url.includes("_list.do") || url.includes("dashboard");
-    const isFormPage =
-      url.includes(".do") &&
-      !url.includes("_list.do") &&
-      (document.querySelector('input[name*="workdate"]') ||
-        document.querySelector('select[name*="showtimeas"]'));
-
-    console.log(
-      `[v0] Page detection - URL: ${url}, isListPage: ${isListPage}, isFormPage: ${isFormPage}`,
-    );
-
-    return { isListPage, isFormPage };
-  }
-
-  function checkForAutoFill() {
-    const { isFormPage } = detectPageType();
-
-    if (
-      isFormPage &&
-      autoFillEnabled &&
-      timeEntries.length > 0 &&
-      !isProcessing
-    ) {
-      console.log(
-        "[v0] Form page detected with auto-fill enabled, triggering automatic form fill",
-      );
-      updateStatus("Auto-filling form...", "info");
-
-      // Small delay to ensure page is fully loaded
-      setTimeout(() => {
-        processEntry(currentIndex);
-      }, 2000);
     }
   }
 
@@ -296,21 +246,8 @@
   // Create the control panel UI
   function createControlPanel() {
     console.log("[v0] Creating control panel...");
-
-    if (window.serviceNowPanelCreated) {
-      console.log("[v0] Panel already exists, skipping creation");
-      return;
-    }
-
-    console.log("[v0] Creating control panel...");
-
-    // Remove any existing panels first
-    const existingPanels = document.querySelectorAll('[id^="serviceNowPanel"]');
-    existingPanels.forEach((panel) => panel.remove());
-
     window.serviceNowPanelCreated = true;
     panelCreated = true;
-
     loadDataFromStorage();
 
     const panel = document.createElement("div");
@@ -318,8 +255,9 @@
 
     panel.style.cssText = `
       position: fixed;
-      top: 20px;
-      right: 20px;
+      top: 0px;
+      right: 100px;
+      left: 100px;
       width: 350px;
       background: white;
       border: 2px solid #007bff;
@@ -329,7 +267,7 @@
       font-family: Arial, sans-serif;
       font-size: 14px;
       user-select: none;
-      cursor: move;
+      cursor: default;
       display: block;
       visibility: visible;
     `;
@@ -338,18 +276,8 @@
       <div style="background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px;">
         <!-- Added drag handle header -->
         <div id="dragHandle" style="background: #007bff; color: white; margin: -15px -15px 10px -15px; padding: 10px 15px; border-radius: 8px 8px 0 0; cursor: move; user-select: none;">
-          <h3 style="margin: 0; font-size: 16px;">ServiceNow Time Entry Automation v2.0</h3>
+          <h3 style="margin: 0; font-size: 16px;">ServiceNow Time Entry Automation</h3>
           <div style="font-size: 11px; opacity: 0.8;">Click and drag to move</div>
-        </div>
-
-        <!-- Auto-fill Toggle -->
-        <div style="margin-bottom: 10px;">
-          <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
-            <input type="checkbox" id="autoFillToggle" ${
-              autoFillEnabled ? "checked" : ""
-            }>
-            Auto-fill forms when page loads
-          </label>
         </div>
 
         <!-- CSV Input -->
@@ -392,17 +320,6 @@
     disableSaveButton();
 
     makeDraggable(panel);
-
-    document
-      .getElementById("autoFillToggle")
-      .addEventListener("change", (e) => {
-        autoFillEnabled = e.target.checked;
-        saveDataToStorage();
-        updateStatus(
-          `Auto-fill ${autoFillEnabled ? "enabled" : "disabled"}`,
-          "info",
-        );
-      });
 
     // Setup event listeners for the control panel
     document.getElementById("parseBtn").addEventListener("click", parseCSVData);
@@ -508,20 +425,20 @@
           }
 
           // Try partial matching for time values
-          if (!option) {
-            const numericValue = Number.parseFloat(value);
-            if (!isNaN(numericValue)) {
-              option = options.find((opt) => {
-                const optText = opt.text.toLowerCase();
-                const hourMatch = optText.match(/(\d+)\s*hr/);
-                if (hourMatch) {
-                  const optHours = Number.parseInt(hourMatch[1]);
-                  return Math.abs(optHours - numericValue) < 0.5;
-                }
-                return false;
-              });
-            }
-          }
+          // if (!option) {
+          //   const numericValue = Number.parseFloat(value);
+          //   if (!isNaN(numericValue)) {
+          //     option = options.find((opt) => {
+          //       const optText = opt.text.toLowerCase();
+          //       const hourMatch = optText.match(/(\d+)\s*hr/);
+          //       if (hourMatch) {
+          //         const optHours = Number.parseInt(hourMatch[1]);
+          //         return Math.abs(optHours - numericValue) < 0.5;
+          //       }
+          //       return false;
+          //     });
+          //   }
+          // }
         }
 
         if (option) {
@@ -935,39 +852,6 @@
     }
   }
 
-  // Process all entries
-  async function processAllEntries() {
-    if (isProcessing || timeEntries.length === 0) return;
-
-    isProcessing = true;
-    updateStatus("Processing all entries...", "info");
-
-    for (let i = 0; i < timeEntries.length; i++) {
-      currentIndex = i;
-      updateEntryPreview();
-
-      if (i > 0) {
-        // Click "New Entry" for subsequent entries
-        clickNewEntry();
-        await delay(2000); // Wait for new form to load
-      }
-
-      processEntry(i);
-      await delay(3000); // Wait for form to be filled
-
-      clickSaveEntry();
-      await delay(2000); // Wait for save to complete
-    }
-
-    isProcessing = false;
-    updateStatus("All entries processed!", "success");
-  }
-
-  // Utility function for delays
-  function delay(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
   // Update status display
   function updateStatus(message, type) {
     const status = document.getElementById("status");
@@ -1167,35 +1051,6 @@
     updateStatus("Page scan complete - check console", "success");
   }
 
-  // Test field detection
-  function testFieldDetection() {
-    console.log("[v0] Testing field detection...");
-    updateStatus("Testing field detection...", "info");
-
-    let foundCount = 0;
-    Object.keys(fieldSelectors).forEach((fieldType) => {
-      const element = findFieldInAllFrames(fieldSelectors[fieldType]);
-      if (element) {
-        foundCount++;
-        console.log(`[v0] ✓ ${fieldType}: Found`);
-        const originalBorder = element.style.border;
-        element.style.border = "3px solid red";
-        setTimeout(() => {
-          element.style.border = originalBorder;
-        }, 2000);
-      } else {
-        console.log(`[v0] ✗ ${fieldType}: NOT FOUND`);
-      }
-    });
-
-    updateStatus(
-      `Field detection test complete: ${foundCount}/${
-        Object.keys(fieldSelectors).length
-      } fields found`,
-      foundCount > 0 ? "success" : "error",
-    );
-  }
-
   function findField(fieldType) {
     return findFieldInAllFrames(fieldSelectors[fieldType]);
   }
@@ -1242,13 +1097,6 @@
       console.log(
         "[v0] Script already initialized, cleaning up and reinitializing",
       );
-      const existing = document.getElementById("serviceNowPanel");
-      if (existing) {
-        existing.remove();
-        console.log("[v0] Cleaned up existing panel during reinit");
-      }
-      window.serviceNowPanelCreated = false;
-      panelCreated = false;
     }
 
     window.timeEntryScriptInitialized = true;
