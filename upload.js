@@ -423,22 +423,6 @@
             console.log(`[v0] Converted ${value} to ${formattedTime}`);
             option = options.find((opt) => opt.text.trim() === formattedTime);
           }
-
-          // Try partial matching for time values
-          // if (!option) {
-          //   const numericValue = Number.parseFloat(value);
-          //   if (!isNaN(numericValue)) {
-          //     option = options.find((opt) => {
-          //       const optText = opt.text.toLowerCase();
-          //       const hourMatch = optText.match(/(\d+)\s*hr/);
-          //       if (hourMatch) {
-          //         const optHours = Number.parseInt(hourMatch[1]);
-          //         return Math.abs(optHours - numericValue) < 0.5;
-          //       }
-          //       return false;
-          //     });
-          //   }
-          // }
         }
 
         if (option) {
@@ -696,29 +680,11 @@
 
   function switchToEmployeeHoursTab() {
     console.log("[v0] Looking for Employee Hours tab...");
-
-    const tabSelectors = [
-      ".tab_caption_text",
-      ".tab-caption",
-      ".nav-tab",
-      '[role="tab"]',
-      ".ui-tabs-tab",
-      ".tab_header",
-    ];
-
     let employeeHoursTab = null;
-
-    tabSelectors.forEach((selector) => {
-      if (!employeeHoursTab) {
-        const elements = document.querySelectorAll(selector);
-        elements.forEach((el) => {
-          if (el.textContent.trim().toLowerCase().includes("employee hours")) {
-            employeeHoursTab = el;
-            console.log(
-              `[v0] Found Employee Hours tab: "${el.textContent.trim()}"`,
-            );
-          }
-        });
+    const elements = document.querySelectorAll(".tab_caption_text");
+    elements.forEach((el) => {
+      if (el.textContent.trim().toLowerCase().includes("employee hours")) {
+        employeeHoursTab = el;
       }
     });
 
@@ -731,8 +697,6 @@
         console.log(
           "[v0] Employee Hours tab loaded, scanning for time fields...",
         );
-        // Re-scan for fields after tab switch
-        // testFieldDetection();
       }, 1);
     } else {
       console.log("[v0] Employee Hours tab not found");
@@ -755,51 +719,11 @@
         return;
       }
     }
-
-    // Look for various "New" or "Add" buttons
-    const newButtons = [
-      'button[aria-label*="New"]',
-      'button[title*="New"]',
-      'button:contains("New")',
-      'a[aria-label*="New"]',
-      'input[value*="New"]',
-      '[data-action="new"]',
-      '.btn:contains("New")',
-    ];
-
-    for (const selector of newButtons) {
-      const button = document.querySelector(selector);
-      if (button && button.offsetParent !== null) {
-        button.click();
-        updateStatus("Clicked New Entry button", "info");
-        return;
-      }
-    }
-
-    // Try a more generic approach
-    const buttons = Array.from(
-      document.querySelectorAll('button, a, input[type="button"]'),
-    );
-    const newButton = buttons.find(
-      (btn) =>
-        btn.textContent.toLowerCase().includes("new") ||
-        btn.title.toLowerCase().includes("new") ||
-        btn.getAttribute("aria-label")?.toLowerCase().includes("new"),
-    );
-
-    if (newButton) {
-      newButton.click();
-      updateStatus("Clicked New Entry button", "info");
-    } else {
-      updateStatus("New Entry button not found", "warning");
-    }
   }
 
   // Click "Save" button
   function clickSaveEntry() {
     disableSaveButton();
-    advanceToNextEntry();
-    updateStatus("Entry marked as complete", "success");
 
     const submitButton = document.querySelector(
       '#sysverb_insert_bottom, button[value="sysverb_insert"]',
@@ -809,46 +733,9 @@
       console.log("[v0] Clicking ServiceNow submit button");
       submitButton.click();
       updateStatus("Clicked Submit button", "success");
+      updateStatus("Entry marked as complete", "success");
+      advanceToNextEntry();
       return;
-    }
-
-    // Fallback to original save button logic
-    const saveButtons = [
-      'button[aria-label*="Save"]',
-      'button[title*="Save"]',
-      'input[value*="Save"]',
-      '[data-action="save"]',
-      'button:contains("Save")',
-      '.btn:contains("Save")',
-    ];
-
-    for (const selector of saveButtons) {
-      const button = document.querySelector(selector);
-      if (button && button.offsetParent !== null) {
-        button.click();
-        updateStatus("Clicked Save button", "info");
-        return;
-      }
-    }
-
-    // Try a more generic approach
-    const buttons = Array.from(
-      document.querySelectorAll(
-        'button, input[type="button"], input[type="submit"]',
-      ),
-    );
-    const saveButton = buttons.find(
-      (btn) =>
-        btn.textContent.toLowerCase().includes("save") ||
-        btn.title.toLowerCase().includes("save") ||
-        btn.getAttribute("aria-label")?.toLowerCase().includes("save"),
-    );
-
-    if (saveButton) {
-      saveButton.click();
-      updateStatus("Clicked Save button", "info");
-    } else {
-      updateStatus("Save button not found", "warning");
     }
   }
 
@@ -993,43 +880,6 @@
           dataRef: element.getAttribute("data-ref"),
           dataType: element.getAttribute("data-type"),
         });
-      }
-    });
-
-    // Scan iframes
-    const iframes = document.querySelectorAll("iframe");
-    console.log(`[v0] Found ${iframes.length} iframes`);
-
-    iframes.forEach((iframe, iframeIndex) => {
-      try {
-        const iframeDoc =
-          iframe.contentDocument || iframe.contentWindow.document;
-        if (iframeDoc) {
-          const iframeInputs = iframeDoc.querySelectorAll(
-            "input, select, textarea",
-          );
-          console.log(
-            `[v0] Iframe ${iframeIndex} has ${iframeInputs.length} form elements`,
-          );
-
-          iframeInputs.forEach((element, index) => {
-            if (element.offsetParent !== null) {
-              console.log(`[v0] Iframe ${iframeIndex} Element ${index}:`, {
-                tag: element.tagName,
-                type: element.type,
-                name: element.name,
-                id: element.id,
-                ariaLabel: element.getAttribute("aria-label"),
-                placeholder: element.placeholder,
-                className: element.className,
-                dataRef: element.getAttribute("data-ref"),
-                dataType: element.getAttribute("data-type"),
-              });
-            }
-          });
-        }
-      } catch (e) {
-        console.log(`[v0] Cannot access iframe ${iframeIndex}: ${e.message}`);
       }
     });
 
