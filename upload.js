@@ -382,6 +382,7 @@
 
     document.body.appendChild(panel);
     console.log("[v0] Control panel created and added to DOM");
+    disableSaveButton();
 
     makeDraggable(panel);
 
@@ -563,7 +564,6 @@
             }
           }, 1000);
         }
-
         return true;
       }
     } catch (error) {
@@ -575,7 +575,6 @@
   // Process single entry - fills fields in specified order
   function processEntry(index) {
     if (index >= timeEntries.length || isProcessing) return;
-
     const entry = timeEntries[index];
     updateStatus("Processing entry...", "info");
 
@@ -670,6 +669,7 @@
   function processFieldsInOrder(entry, processingOrder, currentStep) {
     if (currentStep >= processingOrder.length) {
       console.log("[v0] All fields processed in order");
+      enableSaveButton();
       return;
     }
 
@@ -718,6 +718,26 @@
         }, 500);
       }
     });
+  }
+
+  function enableSaveButton() {
+    let saveButton = document.getElementById("saveBtn");
+    if (saveButton) {
+      console.log("[v0] Enabling Save button after field fill");
+      saveButton.disabled = false;
+    } else {
+      console.log("[v0] Save button not found to enable");
+    }
+  }
+
+  function disableSaveButton() {
+    let saveButton = document.getElementById("saveBtn");
+    if (saveButton) {
+      console.log("[v0] Disabling Save button to prevent premature submission");
+      saveButton.disabled = true;
+    } else {
+      console.log("[v0] Save button not found to disable");
+    }
   }
 
   function processCurrentField(item, value, callback) {
@@ -849,6 +869,7 @@
 
   // Click "Save" button
   function clickSaveEntry() {
+    disableSaveButton();
     advanceToNextEntry();
     updateStatus("Entry marked as complete", "success");
 
@@ -1206,7 +1227,6 @@
 
   function initializeScript() {
     console.log("[v0] Initializing script...");
-
     if (window.timeEntryScriptInitialized) {
       console.log(
         "[v0] Script already initialized, cleaning up and reinitializing"
