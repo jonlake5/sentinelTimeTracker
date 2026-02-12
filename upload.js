@@ -18,7 +18,7 @@
 
   if (window.timeEntryScriptLoaded && window.timeEntryScriptInitialized) {
     console.log(
-      "[v0] Script already loaded and initialized, preventing duplicate execution"
+      "[v0] Script already loaded and initialized, preventing duplicate execution",
     );
     return;
   }
@@ -30,12 +30,12 @@
     try {
       localStorage.setItem(
         "serviceNowTimeEntries",
-        JSON.stringify(timeEntries)
+        JSON.stringify(timeEntries),
       );
       localStorage.setItem("serviceNowCurrentIndex", currentIndex.toString());
       localStorage.setItem(
         "serviceNowAutoFillEnabled",
-        autoFillEnabled.toString()
+        autoFillEnabled.toString(),
       );
       console.log("[v0] Data saved to localStorage");
     } catch (error) {
@@ -61,7 +61,7 @@
           "[v0] Loaded data from storage:",
           timeEntries.length,
           "entries, current index:",
-          currentIndex
+          currentIndex,
         );
 
         setTimeout(() => {
@@ -87,7 +87,7 @@
         document.querySelector('select[name*="showtimeas"]'));
 
     console.log(
-      `[v0] Page detection - URL: ${url}, isListPage: ${isListPage}, isFormPage: ${isFormPage}`
+      `[v0] Page detection - URL: ${url}, isListPage: ${isListPage}, isFormPage: ${isFormPage}`,
     );
 
     return { isListPage, isFormPage };
@@ -103,7 +103,7 @@
       !isProcessing
     ) {
       console.log(
-        "[v0] Form page detected with auto-fill enabled, triggering automatic form fill"
+        "[v0] Form page detected with auto-fill enabled, triggering automatic form fill",
       );
       updateStatus("Auto-filling form...", "info");
 
@@ -343,7 +343,14 @@
         </div>
 
         <!-- Auto-fill Toggle -->
-
+        <div style="margin-bottom: 10px;">
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
+            <input type="checkbox" id="autoFillToggle" ${
+              autoFillEnabled ? "checked" : ""
+            }>
+            Auto-fill forms when page loads
+          </label>
+        </div>
 
         <!-- CSV Input -->
         <div style="margin-bottom: 10px;">
@@ -382,6 +389,7 @@
 
     document.body.appendChild(panel);
     console.log("[v0] Control panel created and added to DOM");
+    disableSaveButton();
 
     makeDraggable(panel);
 
@@ -392,7 +400,7 @@
         saveDataToStorage();
         updateStatus(
           `Auto-fill ${autoFillEnabled ? "enabled" : "disabled"}`,
-          "info"
+          "info",
         );
       });
 
@@ -432,7 +440,7 @@
 
       updateStatus(
         `Parsed ${timeEntries.length} entries successfully`,
-        "success"
+        "success",
       );
       updateEntryCount();
       updateEntryPreview(); // Added call to update preview
@@ -454,13 +462,13 @@
         // Try to find option by text content first
         const options = Array.from(element.options);
         let option = options.find(
-          (opt) => opt.value.toLowerCase() === value.toLowerCase()
+          (opt) => opt.value.toLowerCase() === value.toLowerCase(),
         );
 
         if (!option) {
           // Try by value
           option = options.find((opt) =>
-            opt.text.toLowerCase().match(value.toLowerCase())
+            opt.text.toLowerCase().match(value.toLowerCase()),
           );
         }
 
@@ -485,7 +493,7 @@
             element.name.includes("regularstop"))
         ) {
           console.log(
-            `[v0] Handling time field: ${element.name} with value: ${value}`
+            `[v0] Handling time field: ${element.name} with value: ${value}`,
           );
 
           // Convert decimal hours to "X hr Y min" format if needed
@@ -518,7 +526,7 @@
 
         if (option) {
           console.log(
-            `[v0] Setting select field to: ${option.text} (value: ${option.value})`
+            `[v0] Setting select field to: ${option.text} (value: ${option.value})`,
           );
           element.value = option.value;
           element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -527,7 +535,7 @@
           console.log(`[v0] No matching option found for value: ${value}`);
           console.log(
             `[v0] Available options:`,
-            options.map((opt) => `"${opt.text}" (${opt.value})`)
+            options.map((opt) => `"${opt.text}" (${opt.value})`),
           );
         }
       } else {
@@ -552,18 +560,17 @@
             if (dropdown) {
               const options = dropdown.querySelectorAll(".ac_option");
               const matchingOption = Array.from(options).find((opt) =>
-                opt.textContent.toLowerCase().includes(value.toLowerCase())
+                opt.textContent.toLowerCase().includes(value.toLowerCase()),
               );
               if (matchingOption) {
                 matchingOption.click();
                 console.log(
-                  `[v0] Selected autocomplete option: ${matchingOption.textContent}`
+                  `[v0] Selected autocomplete option: ${matchingOption.textContent}`,
                 );
               }
             }
           }, 1000);
         }
-
         return true;
       }
     } catch (error) {
@@ -575,7 +582,6 @@
   // Process single entry - fills fields in specified order
   function processEntry(index) {
     if (index >= timeEntries.length || isProcessing) return;
-
     const entry = timeEntries[index];
     updateStatus("Processing entry...", "info");
 
@@ -601,7 +607,7 @@
         field: "Project Name",
         fieldType: "projectName",
         step: 5,
-        pauseAfter: false,
+        pauseAfter: true,
       },
       {
         key: "projectActivity",
@@ -646,14 +652,14 @@
 
   function ensureOnDetailsTab(callback) {
     const detailsTabs = Array.from(
-      document.querySelectorAll("span.tab_caption_text")
+      document.querySelectorAll("span.tab_caption_text"),
     ).filter((tab) => tab.textContent.trim() === "Details");
 
     if (detailsTabs.length > 0) {
       // Click the first Details tab to ensure we're on it
       const firstDetailsTab = detailsTabs[0];
       const tabElement = firstDetailsTab.closest(
-        '[role="tab"], .tab_header, .tab'
+        '[role="tab"], .tab_header, .tab',
       );
       if (tabElement) {
         console.log("[v0] Clicking Details tab to ensure we're on it");
@@ -670,6 +676,7 @@
   function processFieldsInOrder(entry, processingOrder, currentStep) {
     if (currentStep >= processingOrder.length) {
       console.log("[v0] All fields processed in order");
+      enableSaveButton();
       return;
     }
 
@@ -680,7 +687,7 @@
 
     if (item.switchToEmployeeHours) {
       console.log(
-        `[v0] Switching to Employee Hours tab before processing ${item.field}`
+        `[v0] Switching to Employee Hours tab before processing ${item.field}`,
       );
       switchToEmployeeHoursTab();
 
@@ -698,13 +705,13 @@
           item.field === "Show Time As"
             ? 3000
             : item.field === "Company"
-            ? 2000
-            : item.field === "Project Name"
-            ? 2000
-            : 1000;
+              ? 2000
+              : item.field === "Project Name"
+                ? 2000
+                : 1000;
 
         console.log(
-          `[v0] Pausing ${pauseTime}ms after ${item.field} for dependent fields to load...`
+          `[v0] Pausing ${pauseTime}ms after ${item.field} for dependent fields to load...`,
         );
         setTimeout(() => {
           console.log(`[v0] Resuming after ${item.field} pause`);
@@ -720,6 +727,26 @@
     });
   }
 
+  function enableSaveButton() {
+    let saveButton = document.getElementById("saveBtn");
+    if (saveButton) {
+      console.log("[v0] Enabling Save button after field fill");
+      saveButton.disabled = false;
+    } else {
+      console.log("[v0] Save button not found to enable");
+    }
+  }
+
+  function disableSaveButton() {
+    let saveButton = document.getElementById("saveBtn");
+    if (saveButton) {
+      console.log("[v0] Disabling Save button to prevent premature submission");
+      saveButton.disabled = true;
+    } else {
+      console.log("[v0] Save button not found to disable");
+    }
+  }
+
   function processCurrentField(item, value, callback) {
     if (value) {
       const element = findField(item.fieldType);
@@ -727,17 +754,17 @@
         const success = fillField(element, value);
         if (success) {
           console.log(
-            `[v0] ✓ Step ${item.step} - Filled ${item.field}: ${value}`
+            `[v0] ✓ Step ${item.step} - Filled ${item.field}: ${value}`,
           );
           updateStatus(`Filled ${item.field}`, "success");
         } else {
           console.log(
-            `[v0] ✗ Step ${item.step} - Failed to fill ${item.field}: ${value}`
+            `[v0] ✗ Step ${item.step} - Failed to fill ${item.field}: ${value}`,
           );
         }
       } else {
         console.log(
-          `[v0] ✗ Step ${item.step} - Field not found: ${item.field}`
+          `[v0] ✗ Step ${item.step} - Field not found: ${item.field}`,
         );
       }
     } else {
@@ -767,7 +794,7 @@
           if (el.textContent.trim().toLowerCase().includes("employee hours")) {
             employeeHoursTab = el;
             console.log(
-              `[v0] Found Employee Hours tab: "${el.textContent.trim()}"`
+              `[v0] Found Employee Hours tab: "${el.textContent.trim()}"`,
             );
           }
         });
@@ -781,7 +808,7 @@
       // Wait for tab content to load
       setTimeout(() => {
         console.log(
-          "[v0] Employee Hours tab loaded, scanning for time fields..."
+          "[v0] Employee Hours tab loaded, scanning for time fields...",
         );
         // Re-scan for fields after tab switch
         // testFieldDetection();
@@ -797,7 +824,7 @@
       const newButton =
         document.querySelector('button#sysverb_new[value="sysverb_new"]') ||
         document.querySelector(
-          'button[table="x_st_sti_tab_daily_time"][data-action-label="New"]'
+          'button[table="x_st_sti_tab_daily_time"][data-action-label="New"]',
         ) ||
         document.querySelector('button.btn-primary:contains("New")');
 
@@ -830,13 +857,13 @@
 
     // Try a more generic approach
     const buttons = Array.from(
-      document.querySelectorAll('button, a, input[type="button"]')
+      document.querySelectorAll('button, a, input[type="button"]'),
     );
     const newButton = buttons.find(
       (btn) =>
         btn.textContent.toLowerCase().includes("new") ||
         btn.title.toLowerCase().includes("new") ||
-        btn.getAttribute("aria-label")?.toLowerCase().includes("new")
+        btn.getAttribute("aria-label")?.toLowerCase().includes("new"),
     );
 
     if (newButton) {
@@ -849,11 +876,12 @@
 
   // Click "Save" button
   function clickSaveEntry() {
+    disableSaveButton();
     advanceToNextEntry();
     updateStatus("Entry marked as complete", "success");
 
     const submitButton = document.querySelector(
-      '#sysverb_insert_bottom, button[value="sysverb_insert"]'
+      '#sysverb_insert_bottom, button[value="sysverb_insert"]',
     );
 
     if (submitButton && submitButton.offsetParent !== null) {
@@ -885,14 +913,14 @@
     // Try a more generic approach
     const buttons = Array.from(
       document.querySelectorAll(
-        'button, input[type="button"], input[type="submit"]'
-      )
+        'button, input[type="button"], input[type="submit"]',
+      ),
     );
     const saveButton = buttons.find(
       (btn) =>
         btn.textContent.toLowerCase().includes("save") ||
         btn.title.toLowerCase().includes("save") ||
-        btn.getAttribute("aria-label")?.toLowerCase().includes("save")
+        btn.getAttribute("aria-label")?.toLowerCase().includes("save"),
     );
 
     if (saveButton) {
@@ -1029,7 +1057,7 @@
           JSON.stringify({
             x: currentX,
             y: currentY,
-          })
+          }),
         );
       }
     }
@@ -1061,7 +1089,7 @@
     console.log("[v0] Scanning main document...");
     const mainInputs = document.querySelectorAll("input, select, textarea");
     console.log(
-      `[v0] Found ${mainInputs.length} form elements in main document`
+      `[v0] Found ${mainInputs.length} form elements in main document`,
     );
 
     mainInputs.forEach((element, index) => {
@@ -1090,10 +1118,10 @@
           iframe.contentDocument || iframe.contentWindow.document;
         if (iframeDoc) {
           const iframeInputs = iframeDoc.querySelectorAll(
-            "input, select, textarea"
+            "input, select, textarea",
           );
           console.log(
-            `[v0] Iframe ${iframeIndex} has ${iframeInputs.length} form elements`
+            `[v0] Iframe ${iframeIndex} has ${iframeInputs.length} form elements`,
           );
 
           iframeInputs.forEach((element, index) => {
@@ -1160,7 +1188,7 @@
       `Field detection test complete: ${foundCount}/${
         Object.keys(fieldSelectors).length
       } fields found`,
-      foundCount > 0 ? "success" : "error"
+      foundCount > 0 ? "success" : "error",
     );
   }
 
@@ -1206,10 +1234,9 @@
 
   function initializeScript() {
     console.log("[v0] Initializing script...");
-
     if (window.timeEntryScriptInitialized) {
       console.log(
-        "[v0] Script already initialized, cleaning up and reinitializing"
+        "[v0] Script already initialized, cleaning up and reinitializing",
       );
       const existing = document.getElementById("serviceNowPanel");
       if (existing) {
