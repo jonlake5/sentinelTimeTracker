@@ -107,31 +107,6 @@
       }
     }
 
-    // Check all iframes
-    const iframes = document.querySelectorAll("iframe");
-    console.log(`[v0] Checking ${iframes.length} iframes...`);
-
-    for (let i = 0; i < iframes.length; i++) {
-      const iframe = iframes[i];
-      try {
-        const iframeDoc =
-          iframe.contentDocument || iframe.contentWindow.document;
-        if (iframeDoc) {
-          for (const selector of selectors) {
-            const elements = iframeDoc.querySelectorAll(selector);
-            for (const element of elements) {
-              if (element && element.offsetParent !== null) {
-                console.log(`[v0] Found field in iframe ${i}: ${selector}`);
-                return element;
-              }
-            }
-          }
-        }
-      } catch (e) {
-        console.log(`[v0] Cannot access iframe ${i}: ${e.message}`);
-      }
-    }
-
     return null;
   }
 
@@ -616,7 +591,6 @@
         );
         setTimeout(() => {
           console.log(`[v0] Resuming after ${item.field} pause`);
-          scanPageForFields(); // Re-scan for new fields
           processFieldsInOrder(entry, processingOrder, currentStep + 1);
         }, pauseTime);
       } else {
@@ -853,52 +827,6 @@
         console.log("[v0] Error restoring position:", e);
       }
     }
-  }
-
-  // Scan page for fields
-  function scanPageForFields() {
-    console.log("[v0] === ENHANCED PAGE SCAN ===");
-    updateStatus("Scanning page for fields...", "info");
-
-    // Scan main document
-    console.log("[v0] Scanning main document...");
-    const mainInputs = document.querySelectorAll("input, select, textarea");
-    console.log(
-      `[v0] Found ${mainInputs.length} form elements in main document`,
-    );
-
-    mainInputs.forEach((element, index) => {
-      if (element.offsetParent !== null) {
-        console.log(`[v0] Main Element ${index}:`, {
-          tag: element.tagName,
-          type: element.type,
-          name: element.name,
-          id: element.id,
-          ariaLabel: element.getAttribute("aria-label"),
-          placeholder: element.placeholder,
-          className: element.className,
-          dataRef: element.getAttribute("data-ref"),
-          dataType: element.getAttribute("data-type"),
-        });
-      }
-    });
-
-    // Test field detection
-    console.log("[v0] Testing field detection...");
-    Object.keys(fieldSelectors).forEach((fieldType) => {
-      const element = findFieldInAllFrames(fieldSelectors[fieldType]);
-      if (element) {
-        console.log(`[v0] ✓ Found ${fieldType}:`, {
-          tag: element.tagName,
-          name: element.name,
-          id: element.id,
-        });
-      } else {
-        console.log(`[v0] ✗ NOT FOUND: ${fieldType}`);
-      }
-    });
-
-    updateStatus("Page scan complete - check console", "success");
   }
 
   function findField(fieldType) {
