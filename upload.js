@@ -13,15 +13,6 @@
   let timeEntries = [];
   let currentIndex = 0;
   let isProcessing = false;
-  let autoFillEnabled = false;
-  let panelCreated = false;
-
-  if (window.timeEntryScriptLoaded && window.timeEntryScriptInitialized) {
-    console.log(
-      "[v0] Script already loaded and initialized, preventing duplicate execution",
-    );
-    return;
-  }
 
   console.log("[v0] Starting ServiceNow Time Entry Automation script");
   window.timeEntryScriptLoaded = true;
@@ -33,10 +24,6 @@
         JSON.stringify(timeEntries),
       );
       localStorage.setItem("serviceNowCurrentIndex", currentIndex.toString());
-      localStorage.setItem(
-        "serviceNowAutoFillEnabled",
-        autoFillEnabled.toString(),
-      );
       console.log("[v0] Data saved to localStorage");
     } catch (error) {
       console.error("[v0] Error saving to localStorage:", error);
@@ -74,43 +61,6 @@
       }
     } catch (error) {
       console.error("[v0] Error loading data from storage:", error);
-    }
-  }
-
-  function detectPageType() {
-    const url = window.location.href;
-    const isListPage = url.includes("_list.do") || url.includes("dashboard");
-    const isFormPage =
-      url.includes(".do") &&
-      !url.includes("_list.do") &&
-      (document.querySelector('input[name*="workdate"]') ||
-        document.querySelector('select[name*="showtimeas"]'));
-
-    console.log(
-      `[v0] Page detection - URL: ${url}, isListPage: ${isListPage}, isFormPage: ${isFormPage}`,
-    );
-
-    return { isListPage, isFormPage };
-  }
-
-  function checkForAutoFill() {
-    const { isFormPage } = detectPageType();
-
-    if (
-      isFormPage &&
-      autoFillEnabled &&
-      timeEntries.length > 0 &&
-      !isProcessing
-    ) {
-      console.log(
-        "[v0] Form page detected with auto-fill enabled, triggering automatic form fill",
-      );
-      updateStatus("Auto-filling form...", "info");
-
-      // Small delay to ensure page is fully loaded
-      setTimeout(() => {
-        processEntry(currentIndex);
-      }, 2000);
     }
   }
 
@@ -154,31 +104,6 @@
           console.log(`[v0] Found field in main document: ${selector}`);
           return element;
         }
-      }
-    }
-
-    // Check all iframes
-    const iframes = document.querySelectorAll("iframe");
-    console.log(`[v0] Checking ${iframes.length} iframes...`);
-
-    for (let i = 0; i < iframes.length; i++) {
-      const iframe = iframes[i];
-      try {
-        const iframeDoc =
-          iframe.contentDocument || iframe.contentWindow.document;
-        if (iframeDoc) {
-          for (const selector of selectors) {
-            const elements = iframeDoc.querySelectorAll(selector);
-            for (const element of elements) {
-              if (element && element.offsetParent !== null) {
-                console.log(`[v0] Found field in iframe ${i}: ${selector}`);
-                return element;
-              }
-            }
-          }
-        }
-      } catch (e) {
-        console.log(`[v0] Cannot access iframe ${i}: ${e.message}`);
       }
     }
 
@@ -296,21 +221,8 @@
   // Create the control panel UI
   function createControlPanel() {
     console.log("[v0] Creating control panel...");
-
-    if (window.serviceNowPanelCreated) {
-      console.log("[v0] Panel already exists, skipping creation");
-      return;
-    }
-
-    console.log("[v0] Creating control panel...");
-
-    // Remove any existing panels first
-    const existingPanels = document.querySelectorAll('[id^="serviceNowPanel"]');
-    existingPanels.forEach((panel) => panel.remove());
-
     window.serviceNowPanelCreated = true;
     panelCreated = true;
-
     loadDataFromStorage();
 
     const panel = document.createElement("div");
@@ -318,8 +230,9 @@
 
     panel.style.cssText = `
       position: fixed;
-      top: 20px;
-      right: 20px;
+      top: 0px;
+      right: 100px;
+      left: 100px;
       width: 350px;
       background: white;
       border: 2px solid #007bff;
@@ -329,7 +242,7 @@
       font-family: Arial, sans-serif;
       font-size: 14px;
       user-select: none;
-      cursor: move;
+      cursor: default;
       display: block;
       visibility: visible;
     `;
@@ -338,18 +251,8 @@
       <div style="background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px;">
         <!-- Added drag handle header -->
         <div id="dragHandle" style="background: #007bff; color: white; margin: -15px -15px 10px -15px; padding: 10px 15px; border-radius: 8px 8px 0 0; cursor: move; user-select: none;">
-          <h3 style="margin: 0; font-size: 16px;">ServiceNow Time Entry Automation v2.0</h3>
+          <h3 style="margin: 0; font-size: 16px;">ServiceNow Time Entry Automation</h3>
           <div style="font-size: 11px; opacity: 0.8;">Click and drag to move</div>
-        </div>
-
-        <!-- Auto-fill Toggle -->
-        <div style="margin-bottom: 10px;">
-          <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
-            <input type="checkbox" id="autoFillToggle" ${
-              autoFillEnabled ? "checked" : ""
-            }>
-            Auto-fill forms when page loads
-          </label>
         </div>
 
         <!-- CSV Input -->
@@ -392,17 +295,6 @@
     disableSaveButton();
 
     makeDraggable(panel);
-
-    document
-      .getElementById("autoFillToggle")
-      .addEventListener("change", (e) => {
-        autoFillEnabled = e.target.checked;
-        saveDataToStorage();
-        updateStatus(
-          `Auto-fill ${autoFillEnabled ? "enabled" : "disabled"}`,
-          "info",
-        );
-      });
 
     // Setup event listeners for the control panel
     document.getElementById("parseBtn").addEventListener("click", parseCSVData);
@@ -505,22 +397,6 @@
               .padStart(2, "0")} min`;
             console.log(`[v0] Converted ${value} to ${formattedTime}`);
             option = options.find((opt) => opt.text.trim() === formattedTime);
-          }
-
-          // Try partial matching for time values
-          if (!option) {
-            const numericValue = Number.parseFloat(value);
-            if (!isNaN(numericValue)) {
-              option = options.find((opt) => {
-                const optText = opt.text.toLowerCase();
-                const hourMatch = optText.match(/(\d+)\s*hr/);
-                if (hourMatch) {
-                  const optHours = Number.parseInt(hourMatch[1]);
-                  return Math.abs(optHours - numericValue) < 0.5;
-                }
-                return false;
-              });
-            }
           }
         }
 
@@ -715,7 +591,6 @@
         );
         setTimeout(() => {
           console.log(`[v0] Resuming after ${item.field} pause`);
-          scanPageForFields(); // Re-scan for new fields
           processFieldsInOrder(entry, processingOrder, currentStep + 1);
         }, pauseTime);
       } else {
@@ -779,29 +654,11 @@
 
   function switchToEmployeeHoursTab() {
     console.log("[v0] Looking for Employee Hours tab...");
-
-    const tabSelectors = [
-      ".tab_caption_text",
-      ".tab-caption",
-      ".nav-tab",
-      '[role="tab"]',
-      ".ui-tabs-tab",
-      ".tab_header",
-    ];
-
     let employeeHoursTab = null;
-
-    tabSelectors.forEach((selector) => {
-      if (!employeeHoursTab) {
-        const elements = document.querySelectorAll(selector);
-        elements.forEach((el) => {
-          if (el.textContent.trim().toLowerCase().includes("employee hours")) {
-            employeeHoursTab = el;
-            console.log(
-              `[v0] Found Employee Hours tab: "${el.textContent.trim()}"`,
-            );
-          }
-        });
+    const elements = document.querySelectorAll(".tab_caption_text");
+    elements.forEach((el) => {
+      if (el.textContent.trim().toLowerCase().includes("employee hours")) {
+        employeeHoursTab = el;
       }
     });
 
@@ -814,8 +671,6 @@
         console.log(
           "[v0] Employee Hours tab loaded, scanning for time fields...",
         );
-        // Re-scan for fields after tab switch
-        // testFieldDetection();
       }, 1);
     } else {
       console.log("[v0] Employee Hours tab not found");
@@ -838,51 +693,11 @@
         return;
       }
     }
-
-    // Look for various "New" or "Add" buttons
-    const newButtons = [
-      'button[aria-label*="New"]',
-      'button[title*="New"]',
-      'button:contains("New")',
-      'a[aria-label*="New"]',
-      'input[value*="New"]',
-      '[data-action="new"]',
-      '.btn:contains("New")',
-    ];
-
-    for (const selector of newButtons) {
-      const button = document.querySelector(selector);
-      if (button && button.offsetParent !== null) {
-        button.click();
-        updateStatus("Clicked New Entry button", "info");
-        return;
-      }
-    }
-
-    // Try a more generic approach
-    const buttons = Array.from(
-      document.querySelectorAll('button, a, input[type="button"]'),
-    );
-    const newButton = buttons.find(
-      (btn) =>
-        btn.textContent.toLowerCase().includes("new") ||
-        btn.title.toLowerCase().includes("new") ||
-        btn.getAttribute("aria-label")?.toLowerCase().includes("new"),
-    );
-
-    if (newButton) {
-      newButton.click();
-      updateStatus("Clicked New Entry button", "info");
-    } else {
-      updateStatus("New Entry button not found", "warning");
-    }
   }
 
   // Click "Save" button
   function clickSaveEntry() {
     disableSaveButton();
-    advanceToNextEntry();
-    updateStatus("Entry marked as complete", "success");
 
     const submitButton = document.querySelector(
       '#sysverb_insert_bottom, button[value="sysverb_insert"]',
@@ -892,80 +707,10 @@
       console.log("[v0] Clicking ServiceNow submit button");
       submitButton.click();
       updateStatus("Clicked Submit button", "success");
+      updateStatus("Entry marked as complete", "success");
+      advanceToNextEntry();
       return;
     }
-
-    // Fallback to original save button logic
-    const saveButtons = [
-      'button[aria-label*="Save"]',
-      'button[title*="Save"]',
-      'input[value*="Save"]',
-      '[data-action="save"]',
-      'button:contains("Save")',
-      '.btn:contains("Save")',
-    ];
-
-    for (const selector of saveButtons) {
-      const button = document.querySelector(selector);
-      if (button && button.offsetParent !== null) {
-        button.click();
-        updateStatus("Clicked Save button", "info");
-        return;
-      }
-    }
-
-    // Try a more generic approach
-    const buttons = Array.from(
-      document.querySelectorAll(
-        'button, input[type="button"], input[type="submit"]',
-      ),
-    );
-    const saveButton = buttons.find(
-      (btn) =>
-        btn.textContent.toLowerCase().includes("save") ||
-        btn.title.toLowerCase().includes("save") ||
-        btn.getAttribute("aria-label")?.toLowerCase().includes("save"),
-    );
-
-    if (saveButton) {
-      saveButton.click();
-      updateStatus("Clicked Save button", "info");
-    } else {
-      updateStatus("Save button not found", "warning");
-    }
-  }
-
-  // Process all entries
-  async function processAllEntries() {
-    if (isProcessing || timeEntries.length === 0) return;
-
-    isProcessing = true;
-    updateStatus("Processing all entries...", "info");
-
-    for (let i = 0; i < timeEntries.length; i++) {
-      currentIndex = i;
-      updateEntryPreview();
-
-      if (i > 0) {
-        // Click "New Entry" for subsequent entries
-        clickNewEntry();
-        await delay(2000); // Wait for new form to load
-      }
-
-      processEntry(i);
-      await delay(3000); // Wait for form to be filled
-
-      clickSaveEntry();
-      await delay(2000); // Wait for save to complete
-    }
-
-    isProcessing = false;
-    updateStatus("All entries processed!", "success");
-  }
-
-  // Utility function for delays
-  function delay(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   // Update status display
@@ -1084,118 +829,6 @@
     }
   }
 
-  // Scan page for fields
-  function scanPageForFields() {
-    console.log("[v0] === ENHANCED PAGE SCAN ===");
-    updateStatus("Scanning page for fields...", "info");
-
-    // Scan main document
-    console.log("[v0] Scanning main document...");
-    const mainInputs = document.querySelectorAll("input, select, textarea");
-    console.log(
-      `[v0] Found ${mainInputs.length} form elements in main document`,
-    );
-
-    mainInputs.forEach((element, index) => {
-      if (element.offsetParent !== null) {
-        console.log(`[v0] Main Element ${index}:`, {
-          tag: element.tagName,
-          type: element.type,
-          name: element.name,
-          id: element.id,
-          ariaLabel: element.getAttribute("aria-label"),
-          placeholder: element.placeholder,
-          className: element.className,
-          dataRef: element.getAttribute("data-ref"),
-          dataType: element.getAttribute("data-type"),
-        });
-      }
-    });
-
-    // Scan iframes
-    const iframes = document.querySelectorAll("iframe");
-    console.log(`[v0] Found ${iframes.length} iframes`);
-
-    iframes.forEach((iframe, iframeIndex) => {
-      try {
-        const iframeDoc =
-          iframe.contentDocument || iframe.contentWindow.document;
-        if (iframeDoc) {
-          const iframeInputs = iframeDoc.querySelectorAll(
-            "input, select, textarea",
-          );
-          console.log(
-            `[v0] Iframe ${iframeIndex} has ${iframeInputs.length} form elements`,
-          );
-
-          iframeInputs.forEach((element, index) => {
-            if (element.offsetParent !== null) {
-              console.log(`[v0] Iframe ${iframeIndex} Element ${index}:`, {
-                tag: element.tagName,
-                type: element.type,
-                name: element.name,
-                id: element.id,
-                ariaLabel: element.getAttribute("aria-label"),
-                placeholder: element.placeholder,
-                className: element.className,
-                dataRef: element.getAttribute("data-ref"),
-                dataType: element.getAttribute("data-type"),
-              });
-            }
-          });
-        }
-      } catch (e) {
-        console.log(`[v0] Cannot access iframe ${iframeIndex}: ${e.message}`);
-      }
-    });
-
-    // Test field detection
-    console.log("[v0] Testing field detection...");
-    Object.keys(fieldSelectors).forEach((fieldType) => {
-      const element = findFieldInAllFrames(fieldSelectors[fieldType]);
-      if (element) {
-        console.log(`[v0] ✓ Found ${fieldType}:`, {
-          tag: element.tagName,
-          name: element.name,
-          id: element.id,
-        });
-      } else {
-        console.log(`[v0] ✗ NOT FOUND: ${fieldType}`);
-      }
-    });
-
-    updateStatus("Page scan complete - check console", "success");
-  }
-
-  // Test field detection
-  function testFieldDetection() {
-    console.log("[v0] Testing field detection...");
-    updateStatus("Testing field detection...", "info");
-
-    let foundCount = 0;
-    Object.keys(fieldSelectors).forEach((fieldType) => {
-      const element = findFieldInAllFrames(fieldSelectors[fieldType]);
-      if (element) {
-        foundCount++;
-        console.log(`[v0] ✓ ${fieldType}: Found`);
-        const originalBorder = element.style.border;
-        element.style.border = "3px solid red";
-        setTimeout(() => {
-          element.style.border = originalBorder;
-        }, 2000);
-      } else {
-        console.log(`[v0] ✗ ${fieldType}: NOT FOUND`);
-      }
-    });
-
-    updateStatus(
-      `Field detection test complete: ${foundCount}/${
-        Object.keys(fieldSelectors).length
-      } fields found`,
-      foundCount > 0 ? "success" : "error",
-    );
-  }
-
   function findField(fieldType) {
     return findFieldInAllFrames(fieldSelectors[fieldType]);
   }
@@ -1242,13 +875,6 @@
       console.log(
         "[v0] Script already initialized, cleaning up and reinitializing",
       );
-      const existing = document.getElementById("serviceNowPanel");
-      if (existing) {
-        existing.remove();
-        console.log("[v0] Cleaned up existing panel during reinit");
-      }
-      window.serviceNowPanelCreated = false;
-      panelCreated = false;
     }
 
     window.timeEntryScriptInitialized = true;
