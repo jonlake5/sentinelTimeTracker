@@ -1,4 +1,4 @@
-$CONTENT_FILE = "C:\Users\jlake\OneDrive - Sentinel Technologies\Documents\Time Tracking Excel.xlsx"
+$CONTENT_FILE = C:\Users\jlake\OneDrive - Sentinel Technologies\Documents\tt2\Time Tracking Excel.xlsx
 $TEMP_FILE = "C:\temp\time_entry.csv"
 
 New-item -type Directory -path (split-path $TEMP_FILE) -Force | out-null
