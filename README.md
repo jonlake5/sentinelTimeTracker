@@ -1,10 +1,10 @@
 # How This Works
 
-I have an excel sheet I use to keep track of time entries. In there, I have it formatted to it can easily
+I have an excel sheet I use to keep track of time entries. In there, I have it formatted so it can easily
 be imported to ServiceNow via a TamperMonkey script.
-Once I have all my time entries in the excel sheet, I run a powershell one-liner that converts relevant
+Once I have all my time entries in the excel sheet, I run a powershell one-liner that converts the relevant time entry
 data to CSV and puts it in my clipboard. Once in my clipboard I go to Daily Time, past the generated csv data,
-then process each time entry into ServiceNow. All of the fields are typically filled in automatically, and any
+then process each time entry into ServiceNow. All of the fields are typically filled in automatically, and any manual
 adjustments can be made prior to hitting Save.
 
 ## Browser Setup
@@ -18,21 +18,29 @@ adjustments can be made prior to hitting Save.
 1. Click on the Tamper Monkey extension and choose Create a New Script
 1. Paste the contents of the upload.js script
 
+## Environment Setup
+
+1. Download the latest version from https://github.com/jonlake5/sentinelTimeTracker/tags
+1. Unzip the downloaded file to a new directory
+1. Open a powershell terminal in the unzipped directory
+1. Run the below commands to execute setup.ps1 powershell script.
+
+   ` 
+ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+./setup.ps1
+    `
+
+1. This will create a new directory (Default is C:\users\<username>\Documents\Time Tracking) and place your new working copy of the Excel Sheet and Power Shell script in that directory.
+
 ## Excel Doc Setup
 
-1. Download the Example Excel Document lotated in this repo.
-1. Save it to a known location where you won't move it. This is important when running powershell to copy the data.
+1. Open the Excel file that was copied to the new directory in the previous step
 1. Edit the Active Projects tab.
-   1. Put the Customer Name in Column A (as it shows in ServiceNOW)
-   1. Put Project Name in Column B (as it shows in ServiceNOW)
+   1. Put the Customer Name in Column A (exactly as it shows in ServiceNOW)
+   1. Put Project Name in Column B (exactly as it shows in ServiceNOW)
    1. You can edit and use the rest of the columns as you like. I just added some more data for each project that was helpful
 1. Ensure this formula is in all data rows in Column M `=TEXTSPLIT(TEXTJOIN(",",TRUE,FILTER('Active Projects'!B:B, 'Active Projects'!A:A=INDIRECT("B"&ROW()))),",")`
    1. This provides the drop down data validation for the Project Names in Column C
-
-## Powershell Script Setup
-
-This powershell script will copy all necessary data from the Time Tracking sheet where the Date field is populated.
-Edit the powershell script line that looks like `$CONTENT_FILE = "C:\Users\jlake\OneDrive - Sentinel Technologies\Documents\Time Tracking Excel.xlsx"` matches the path to the Excel sheet your time will be kept in.
 
 # Creating Time Entries
 
@@ -40,18 +48,18 @@ If you have completed all the previous steps you should be ready to use the tool
 
 ## Add Time Entries to Excel
 
-Fill out one line per time entry in the Excel sheet on the Time Tracking sheet. This only works for the ServiceNOW category Work (i.e. any Assigned Project, Non-Billable Work Hours, Sales Support, etc). Personal time is not tested with this.
+Fill out one line per time entry in the Excel sheet on the Time Tracking sheet. This only works for the ServiceNOW category Work (i.e. any Assigned Project, Non-Billable Work Hours, Sales Support, etc). Personal time does not work with this.
 
 ## Get Data to Clipboard
 
 Once you're ready to enter your time entries from excel to follow these steps:
 
 1.  Close the Excel sheet. This is important or you will get an error when trying to run the powershell script.
-1.  Run the powershell script as shown below. I saved the Powershell Script to `C:\users\jlake\OneDrive - Sentinel Technologies\Documents\Coding\TimeEntry-Tampermonkey\Get-TimeEntries.ps1` Update paths as necessary in the below command
+1.  Run the powershell command that was provided to you in the setup steps. It will look similar to this:
 
-    `& 'C:\users\jlake\OneDrive - Sentinel Technologies\Documents\Coding\TimeEntry-Tampermonkey\Get-TimeEntries.ps1' ; get-content C:\temp\time_entry.csv | set-clipboard`
+    `& 'C:\users\<username>\OneDrive - Sentinel Technologies\Documents\Time Tracking\Get-TimeEntries.ps1' ; get-content C:\temp\time_entry.csv | set-clipboard`
 
-1.  I have a saved clip in Ditto Clipboard Manager that calls this powershell oneliner. Whatever is easiest for you to call the script works.
+1.  I have a saved clip in Ditto Clipboard Manager that calls this powershell oneliner. Whatever is easiest for you to run/paste the script into powershell works.
 
 ## Adding Time Entries into ServiceNOW
 
